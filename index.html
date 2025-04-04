@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            min-height: 100vh;
+        }
+        .task-item {
+            transition: all 0.3s ease;
+        }
+        .task-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        .list-container {
+            background: rgba(45, 55, 72, 0.95);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center min-h-screen p-6 text-gray-200">
+    <h1 class="text-3xl font-bold mb-6 text-white">To-Do List</h1>
+    <div class="mb-8 w-full max-w-md">
+        <div class="flex gap-2">
+            <input 
+                type="text" 
+                id="taskInput" 
+                class="flex-1 p-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                placeholder="เพิ่มงานใหม่..."
+            >
+            <button 
+                onclick="addTask()" 
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+            >
+                เพิ่ม
+            </button>
+        </div>
+    </div>
+    <div class="flex flex-col md:flex-row gap-6 w-full max-w-4xl">
+        <div class="flex-1 min-h-[400px] list-container p-5 rounded-xl shadow-lg" id="todo">
+            <h3 class="text-xl font-semibold text-blue-400 mb-4">ยังไม่ทำ</h3>
+        </div>
+        <div class="flex-1 min-h-[400px] list-container p-5 rounded-xl shadow-lg" id="done">
+            <h3 class="text-xl font-semibold text-green-400 mb-4">ทำแล้ว</h3>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const todoList = document.getElementById("todo");
+            const doneList = document.getElementById("done");
+            let tasks = JSON.parse(localStorage.getItem("tasks")) || { todo: [], done: [] };
+
+            function renderTasks() {
+                todoList.innerHTML = "<h3 class='text-xl font-semibold text-blue-400 mb-4'>ยังไม่ทำ</h3>";
+                doneList.innerHTML = "<h3 class='text-xl font-semibold text-green-400 mb-4'>ทำแล้ว</h3>";
+                tasks.todo.forEach((task, index) => addTaskElement(task, "todo", index));
+                tasks.done.forEach((task, index) => addTaskElement(task, "done", index));
+            }
+
+            function addTaskElement(task, list, index) {
+                const div = document.createElement("div");
+                div.className = "task-item bg-gray-700 p-3 mb-3 rounded-lg cursor-grab relative group";
+                div.draggable = true;
+                div.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="task-text text-gray-200">${task}</span>
+                        <div class="space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button class="text-green-400 hover:text-green-300 text-sm edit-btn" onclick="editTask('${list}', ${index})">แก้ไข</button>
+                            <button class="text-red-400 hover:text-red-300 text-sm" onclick="deleteTask('${list}', ${index})">ลบ</button>
+                        </div>
+                    </div>
+                    <input class="edit-input hidden w-full mt-2 p-2 bg-gray-800 border border-gray-600 rounded text-white" type="text" value="${task}" />
+                `;
+                div.addEventListener("dragstart", (e) => {
+                    e.dataTransfer.setData("text", task);
+                    e.dataTransfer.setData("list", list);
+                });
+                document.getElementById(list).appendChild(div);
+            }
+
+            window.addTask = function() {
+                const input = document.getElementById("taskInput");
+                if (input.value.trim()) {
+                    tasks.todo.push(input.value.trim());
+                    localStorage.setItem("tasks", JSON.stringify(tasks));
+                    input.value = "";
+                    renderTasks();
+                }
+            };
+
+            window.deleteTask = function(list, index) {
+                tasks[list] = tasks[list].filter((_, i) => i !== index);
+                localStorage.setItem("tasks", JSON.stringify(tasks));
+                renderTasks();
+            };
+
+            window.editTask = function(list, index) {
+                const taskDiv = document.getElementById(list).children[index + 1];
+                const input = taskDiv.querySelector('.edit-input');
+                const text = taskDiv.querySelector('.task-text');
+                input.classList.toggle('hidden');
+                text.classList.toggle('hidden');
+                if (!input.classList.contains('hidden')) {
+                    input.focus();
+                    input.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            saveEdit(list, index, input.value);
+                        }
+                    });
+                } else {
+                    saveEdit(list, index, input.value);
+                }
+            };
+
+            function saveEdit(list, index, value) {
+                if (value.trim()) {
+                    tasks[list][index] = value.trim();
+                    localStorage.setItem("tasks", JSON.stringify(tasks));
+                    renderTasks();
+                }
+            }
+
+            document.querySelectorAll(".list-container").forEach(list => {
+                list.addEventListener("dragover", (e) => e.preventDefault());
+                list.addEventListener("drop", (e) => {
+                    e.preventDefault();
+                    const task = e.dataTransfer.getData("text");
+                    const fromList = e.dataTransfer.getData("list");
+                    if (list.id !== fromList) {
+                        tasks[fromList] = tasks[fromList].filter(t => t !== task);
+                        tasks[list.id].push(task);
+                        localStorage.setItem("tasks", JSON.stringify(tasks));
+                        renderTasks();
+                    }
+                });
+            });
+
+            renderTasks();
+        });
+    </script>
+</body>
+</html>
