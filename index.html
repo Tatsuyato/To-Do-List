@@ -61,10 +61,57 @@
     </div>
 
     <script>
-        // Register Service Worker
+        // Service Worker code embedded as a Blob
+        const serviceWorkerCode = `
+            const CACHE_NAME = 'todo-list-cache-v1';
+            const urlsToCache = [
+                '/',
+                '/index.html',
+                'https://cdn.tailwindcss.com'
+            ];
+
+            self.addEventListener('install', event => {
+                event.waitUntil(
+                    caches.open(CACHE_NAME)
+                        .then(cache => {
+                            return cache.addAll(urlsToCache);
+                        })
+                );
+            });
+
+            self.addEventListener('fetch', event => {
+                event.respondWith(
+                    caches.match(event.request)
+                        .then(response => {
+                            return response || fetch(event.request);
+                        }).catch(() => {
+                            return caches.match('/index.html');
+                        })
+                );
+            });
+
+            self.addEventListener('activate', event => {
+                const cacheWhitelist = [CACHE_NAME];
+                event.waitUntil(
+                    caches.keys().then(cacheNames => {
+                        return Promise.all(
+                            cacheNames.map(cacheName => {
+                                if (!cacheWhitelist.includes(cacheName)) {
+                                    return caches.delete(cacheName);
+                                }
+                            })
+                        );
+                    })
+                );
+            });
+        `;
+
+        // Register Service Worker from Blob
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
+                const blob = new Blob([serviceWorkerCode], { type: 'application/javascript' });
+                const workerUrl = URL.createObjectURL(blob);
+                navigator.serviceWorker.register(workerUrl)
                     .then(reg => console.log('Service Worker registered'))
                     .catch(err => console.log('Service Worker registration failed:', err));
             });
@@ -195,6 +242,7 @@
             }
 
             document.querySelectorAll(".list-container").forEach(list => {
+```html
                 list.addEventListener("dragover", (e) => e.preventDefault());
                 list.addEventListener("drop", (e) => {
                     e.preventDefault();
