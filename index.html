@@ -6,9 +6,19 @@
     <title>To-Do List</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {
+        body.light {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            color: #2d3748;
+        }
+        body.dark {
             background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
-            min-height: 100vh;
+            color: #e2e8f0;
+        }
+        .list-container.light {
+            background: rgba(255, 255, 255, 0.95);
+        }
+        .list-container.dark {
+            background: rgba(45, 55, 72, 0.95);
         }
         .task-item {
             transition: all 0.3s ease;
@@ -17,25 +27,25 @@
             transform: translateX(5px);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
         }
-        .list-container {
-            background: rgba(45, 55, 72, 0.95);
-            backdrop-filter: blur(10px);
-        }
     </style>
 </head>
-<body class="flex flex-col items-center min-h-screen p-6 text-gray-200">
-    <h1 class="text-3xl font-bold mb-6 text-white">To-Do List</h1>
+<body class="flex flex-col items-center min-h-screen p-6 transition-colors duration-300">
+    <div class="flex justify-between items-center w-full max-w-4xl mb-6">
+        <h1 class="text-3xl font-bold" id="title">To-Do List</h1>
+        <button id="themeToggle" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded-lg">Toggle Theme</button>
+    </div>
     <div class="mb-8 w-full max-w-md">
         <div class="flex gap-2">
             <input 
                 type="text" 
                 id="taskInput" 
-                class="flex-1 p-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                placeholder="เพิ่มงานใหม่..."
+                class="flex-1 p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                placeholder=""
             >
             <button 
                 onclick="addTask()" 
-                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200" 
+                id="addButton"
             >
                 เพิ่ม
             </button>
@@ -43,39 +53,91 @@
     </div>
     <div class="flex flex-col md:flex-row gap-6 w-full max-w-4xl">
         <div class="flex-1 min-h-[400px] list-container p-5 rounded-xl shadow-lg" id="todo">
-            <h3 class="text-xl font-semibold text-blue-400 mb-4">ยังไม่ทำ</h3>
+            <h3 class="text-xl font-semibold text-blue-400 mb-4" id="todoHeader">ยังไม่ทำ</h3>
         </div>
         <div class="flex-1 min-h-[400px] list-container p-5 rounded-xl shadow-lg" id="done">
-            <h3 class="text-xl font-semibold text-green-400 mb-4">ทำแล้ว</h3>
+            <h3 class="text-xl font-semibold text-green-400 mb-4" id="doneHeader">ทำแล้ว</h3>
         </div>
     </div>
 
     <script>
+        // Language translations
+        const translations = {
+            th: { title: "To-Do List", add: "เพิ่ม", placeholder: "เพิ่มงานใหม่...", todo: "ยังไม่ทำ", done: "ทำแล้ว", edit: "แก้ไข", delete: "ลบ" },
+            en: { title: "To-Do List", add: "Add", placeholder: "Add a new task...", todo: "To Do", done: "Done", edit: "Edit", delete: "Delete" },
+            ja: { title: "To-Doリスト", add: "追加", placeholder: "新しいタスクを追加...", todo: "未完了", done: "完了", edit: "編集", delete: "削除" },
+            zh: { title: "待办清单", add: "添加", placeholder: "添加新任务...", todo: "未完成", done: "已完成", edit: "编辑", delete: "删除" },
+            ko: { title: "할 일 목록", add: "추가", placeholder: "새 작업 추가...", todo: "해야 할 일", done: "완료", edit: "수정", delete: "삭제" },
+            lo: { title: "ລາຍການທີ່ຕ້ອງເຮັດ", add: "ເພີ່ມ", placeholder: "ເພີ່ມວຽກໃໝ່...", todo: "ຍັງບໍ່ໄດ້ເຮັດ", done: "ເຮັດແລ້ວ", edit: "ແກ້ໄຂ", delete: "ລຶບ" }
+        };
+
+        // Detect user language and theme
+        const userLang = (navigator.language || navigator.userLanguage).substring(0, 2);
+        const supportedLangs = ['th', 'en', 'ja', 'zh', 'ko', 'lo'];
+        const lang = supportedLangs.includes(userLang) ? userLang : 'en';
+        document.documentElement.lang = lang;
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        let isDark = prefersDark;
+        applyTheme();
+
+        // Theme toggle
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            isDark = !isDark;
+            applyTheme();
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+
+        function applyTheme() {
+            document.body.className = `flex flex-col items-center min-h-screen p-6 transition-colors duration-300 ${isDark ? 'dark' : 'light'}`;
+            document.getElementById('taskInput').className = `flex-1 p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'}`;
+            const taskItems = document.querySelectorAll('.task-item');
+            taskItems.forEach(item => {
+                item.className = `task-item ${isDark ? 'bg-gray-700' : 'bg-gray-200'} p-3 mb-3 rounded-lg cursor-grab relative group`;
+            });
+            const editInputs = document.querySelectorAll('.edit-input');
+            editInputs.forEach(input => {
+                input.className = `edit-input hidden w-full mt-2 p-2 rounded text-white ${isDark ? 'bg-gray-800 border-gray-600' : 'bg-gray-100 border-gray-300 text-gray-900'}`;
+            });
+        }
+
+        // Apply translations
+        function applyLanguage() {
+            const t = translations[lang];
+            document.getElementById('title').textContent = t.title;
+            document.getElementById('addButton').textContent = t.add;
+            document.getElementById('taskInput').placeholder = t.placeholder;
+            document.getElementById('todoHeader').textContent = t.todo;
+            document.getElementById('doneHeader').textContent = t.done;
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
             const todoList = document.getElementById("todo");
             const doneList = document.getElementById("done");
             let tasks = JSON.parse(localStorage.getItem("tasks")) || { todo: [], done: [] };
 
+            applyLanguage();
+
             function renderTasks() {
-                todoList.innerHTML = "<h3 class='text-xl font-semibold text-blue-400 mb-4'>ยังไม่ทำ</h3>";
-                doneList.innerHTML = "<h3 class='text-xl font-semibold text-green-400 mb-4'>ทำแล้ว</h3>";
+                todoList.innerHTML = `<h3 class="text-xl font-semibold text-blue-400 mb-4">${translations[lang].todo}</h3>`;
+                doneList.innerHTML = `<h3 class="text-xl font-semibold text-green-400 mb-4">${translations[lang].done}</h3>`;
                 tasks.todo.forEach((task, index) => addTaskElement(task, "todo", index));
                 tasks.done.forEach((task, index) => addTaskElement(task, "done", index));
             }
 
             function addTaskElement(task, list, index) {
                 const div = document.createElement("div");
-                div.className = "task-item bg-gray-700 p-3 mb-3 rounded-lg cursor-grab relative group";
+                div.className = `task-item ${isDark ? 'bg-gray-700' : 'bg-gray-200'} p-3 mb-3 rounded-lg cursor-grab relative group`;
                 div.draggable = true;
                 div.innerHTML = `
                     <div class="flex justify-between items-center">
-                        <span class="task-text text-gray-200">${task}</span>
+                        <span class="task-text ${isDark ? 'text-gray-200' : 'text-gray-900'}">${task}</span>
                         <div class="space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button class="text-green-400 hover:text-green-300 text-sm edit-btn" onclick="editTask('${list}', ${index})">แก้ไข</button>
-                            <button class="text-red-400 hover:text-red-300 text-sm" onclick="deleteTask('${list}', ${index})">ลบ</button>
+                            <button class="text-green-400 hover:text-green-300 text-sm edit-btn" onclick="editTask('${list}', ${index})">${translations[lang].edit}</button>
+                            <button class="text-red-400 hover:text-red-300 text-sm" onclick="deleteTask('${list}', ${index})">${translations[lang].delete}</button>
                         </div>
                     </div>
-                    <input class="edit-input hidden w-full mt-2 p-2 bg-gray-800 border border-gray-600 rounded text-white" type="text" value="${task}" />
+                    <input class="edit-input hidden w-full mt-2 p-2 rounded ${isDark ? 'bg-gray-800 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'}" type="text" value="${task}" />
                 `;
                 div.addEventListener("dragstart", (e) => {
                     e.dataTransfer.setData("text", task);
