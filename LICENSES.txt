@@ -1,0 +1,5 @@
+Third-Party Libraries Used:
+
+1. Tailwind CSS
+   License: MIT License
+   URL: https://github.com/tailwindlabs/tailwindcss/blob/master/LICENSE
